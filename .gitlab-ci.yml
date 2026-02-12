@@ -33,7 +33,6 @@ install:
     expire_in: 7 days
     paths:
       - node_modules/
-      - .pnpm-store/
       - pnpm-lock.yaml
 
 lint:
