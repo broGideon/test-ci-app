@@ -1,0 +1,91 @@
+stages:
+  - install
+  - lint
+  - test
+  - security
+  - build
+
+variables:
+  NODE_ENV: "production"
+
+.default_pnpm_job:
+  image: node:22-alpine
+  tags:
+    - docker-runner
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm --activate
+
+install:
+  stage: install
+  extends: .default_pnpm_job
+  cache:
+    key:
+      files:
+        - package-lock.json
+      prefix: pnpm
+    paths:
+      - node_modules/
+  script:
+    - pnpm install --frozen-lockfile
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - node_modules/
+      - .pnpm-store/
+      - pnpm-lock.yaml
+
+lint:
+  stage: lint
+  extends: .default_pnpm_job
+  needs:
+    - install
+  script:
+    - pnpm lint:ci
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - eslint-report.json
+
+test:
+  stage: test
+  extends: .default_pnpm_job
+  needs:
+    - install
+  script:
+    - pnpm test:ci
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - junit.xml
+      - coverage
+
+security:
+  stage: security
+  extends: .default_pnpm_job
+  needs:
+    - install
+  script:
+    - pnpm audit --audit-level=moderate --json > pnpm-audit.json || true
+  allow_failure: true
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - pnpm-audit.json
+
+build:
+  stage: build
+  extends: .default_pnpm_job
+  needs:
+    - install
+  script:
+    - pnpm build
+  artifacts:
+    when: on_success
+    expire_in: 14 days
+    paths:
+      - dist/
