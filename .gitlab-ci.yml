@@ -1,45 +1,28 @@
 stages:
-  - install
   - lint
   - test
   - security
   - build
 
-variables:
-  NODE_ENV: "production"
-
 .default_pnpm_job:
   image: node:22-alpine
-  tags:
-    - docker-runner
-  before_script:
-    - corepack enable
-    - corepack prepare pnpm --activate
-
-install:
-  stage: install
-  extends: .default_pnpm_job
+  tags: [docker-runner]
   cache:
     key:
       files:
-        - package-lock.json
+        - pnpm-lock.yaml
       prefix: pnpm
     paths:
-      - node_modules/
-  script:
-    - pnpm install --frozen-lockfile
-  artifacts:
-    when: always
-    expire_in: 7 days
-    paths:
-      - node_modules/
-      - pnpm-lock.yaml
+      - .pnpm-store/
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@9.15.5 --activate
+    - pnpm config set store-dir "$CI_PROJECT_DIR/.pnpm-store"
+    - pnpm install --frozen-lockfile --prod=false
 
 lint:
   stage: lint
   extends: .default_pnpm_job
-  needs:
-    - install
   script:
     - pnpm lint:ci
   artifacts:
@@ -51,8 +34,6 @@ lint:
 test:
   stage: test
   extends: .default_pnpm_job
-  needs:
-    - install
   script:
     - pnpm test:ci
   artifacts:
@@ -65,8 +46,6 @@ test:
 security:
   stage: security
   extends: .default_pnpm_job
-  needs:
-    - install
   script:
     - pnpm audit --audit-level=moderate --json > pnpm-audit.json || true
   allow_failure: true
@@ -79,8 +58,6 @@ security:
 build:
   stage: build
   extends: .default_pnpm_job
-  needs:
-    - install
   script:
     - pnpm build
   artifacts:
