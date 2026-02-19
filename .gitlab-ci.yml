@@ -6,7 +6,8 @@ stages:
 
 .default_pnpm_job:
   image: node:22-alpine
-  tags: [docker-runner]
+  tags:
+    - docker-runner
   cache:
     key:
       files:
@@ -16,7 +17,7 @@ stages:
       - .pnpm-store/
   before_script:
     - corepack enable
-    - corepack prepare pnpm@9.15.5 --activate
+    - corepack prepare pnpm --activate
     - pnpm config set store-dir "$CI_PROJECT_DIR/.pnpm-store"
     - pnpm install --frozen-lockfile --prod=false
 
